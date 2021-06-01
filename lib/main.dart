@@ -31,8 +31,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   Stream<StepCount> _stepCountStream;
   Stream<PedestrianStatus> _pedestrianStatusStream;
-  String _status = 'stopped', _steps = '?';
+  String _status = 'stopped';
   String _toggleButtonText = 'Start';
+  int _stepCnt = 0;
 
   List<Widget> renderPedometerElements() {
     List<Widget> pedometerElements;
@@ -43,7 +44,7 @@ class _MyHomePageState extends State<MyHomePage> {
           style: TextStyle(fontSize: 30),
         ),
         Text(
-          _steps,
+          _stepCnt.toString(),
           style: TextStyle(fontSize: 60),
         ),
         Divider(
@@ -80,7 +81,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _togglePedometer() {
     setState(() {
-      _toggleButtonText = _toggleButtonText == 'Start' ? 'Stop' : 'Start';
+      if (_toggleButtonText == 'Start') {
+        _toggleButtonText = 'Stop';
+        _stepCnt = 0;
+      } else {
+        _toggleButtonText = 'Start';
+      }
     });
   }
 
@@ -94,7 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // print(event);
     print('STEP COUNT EVENT: ${event.steps.toString()}');
     setState(() {
-      _steps = event.steps.toString();
+      _stepCnt += 1;
     });
   }
 
@@ -119,7 +125,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void onStepCountError(error) {
     print('onStepCountError: $error');
     setState(() {
-      _steps = 'Step Count not available';
+      _stepCnt = -1;
     });
   }
 
