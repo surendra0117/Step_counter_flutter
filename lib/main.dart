@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:pedometer/pedometer.dart';
 
 void main() {
@@ -34,6 +35,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _status = 'stopped';
   String _toggleButtonText = 'Start';
   int _stepCnt = 0;
+  String permissionStatus = 'PERMISSION DENIED';
 
   List<Widget> renderPedometerElements() {
     List<Widget> pedometerElements;
@@ -79,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return pedometerElements;
   }
 
-  void _togglePedometer() {
+  void _togglePedometer() async {
     setState(() {
       if (_toggleButtonText == 'Start') {
         _toggleButtonText = 'Stop';
@@ -93,10 +95,35 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    getPermissions();
     initPlatformState();
   }
 
-  void onStepCount(StepCount event) {
+  void getPermissions() async {
+    print('CHECKING FOR PERMISSIONS...');
+    if (await Permission.speech.isPermanentlyDenied) {
+      openAppSettings();
+    }
+    var status = await Permission.activityRecognition.status;
+    if (status.isDenied) {
+      setState(() {
+        permissionStatus = 'PERMISSION DENIED';
+      });
+    }
+
+    if (await Permission.activityRecognition.request().isGranted) {
+      setState(() {
+        permissionStatus = 'GRANTED';
+      });
+    }
+
+    // // You can can also directly ask the permission about its status.
+    // if (await Permission.activityRecognition.isRestricted) {
+    //   print('PERMISSION RESTRICTED!!!');
+    // }
+  }
+
+  void onStepCount(StepCount event) async {
     // print(event);
     print('STEP COUNT EVENT: ${event.steps.toString()}');
     setState(() {
@@ -104,7 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void onPedestrianStatusChanged(PedestrianStatus event) {
+  void onPedestrianStatusChanged(PedestrianStatus event) async {
     // print(event);
     print('STATUS CHANGED EVENT: ${event.status}');
     setState(() {
@@ -114,7 +141,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void onPedestrianStatusError(error) {
+  void onPedestrianStatusError(error) async {
     print('onPedestrianStatusError: $error');
     setState(() {
       _status = 'Pedestrian Status not available';
@@ -122,7 +149,7 @@ class _MyHomePageState extends State<MyHomePage> {
     print(_status);
   }
 
-  void onStepCountError(error) {
+  void onStepCountError(error) async {
     print('onStepCountError: $error');
     setState(() {
       _stepCnt = -1;
@@ -141,6 +168,29 @@ class _MyHomePageState extends State<MyHomePage> {
     if (!mounted) return;
   }
 
+  List<Widget> renderScreen() {
+    List<Widget> columnChildrens = [];
+    if (permissionStatus == 'GRANTED') {
+      columnChildrens = <Widget>[
+        FloatingActionButton(
+          onPressed: _togglePedometer,
+          child: Text(_toggleButtonText),
+        ),
+        ...renderPedometerElements(),
+      ];
+    } else {
+      columnChildrens = <Widget>[
+        Center(
+          child: Text(
+            'SENSOR PERMISSION DENIED',
+            style: TextStyle(fontSize: 20.0),
+          ),
+        ),
+      ];
+    }
+    return columnChildrens;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,13 +200,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            FloatingActionButton(
-              onPressed: _togglePedometer,
-              child: Text(_toggleButtonText),
-            ),
-            ...renderPedometerElements(),
-          ],
+          children: renderScreen(),
         ),
       ),
       // This trailing comma makes auto-formatting nicer for build methods.
